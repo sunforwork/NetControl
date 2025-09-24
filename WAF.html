@@ -188,11 +188,11 @@
     </div>
   </div>
 
-  <!-- 底部固定条：IP 与 RAY-id 两行显示（不调用外部 API，RAY-id 不上报） -->
+  <!-- 底部固定条：IP 与 RAY-id 两行显示-->
   <div class="bottom-bar" role="region" aria-label="外网 IP 与 RAY-id" id="bottomBar">
     <div class="bottom-left">
       <div class="label">您的外网 IP / RAY-id</div>
-      <div class="sub" id="ip-sub">正在通过浏览器本地方法获取 IP（不调用任何 API）…</div>
+      <div class="sub" id="ip-sub">正在通过获取 IP</div>
     </div>
 
     <div class="info-block" id="infoBlock" aria-live="polite">
@@ -226,7 +226,7 @@
       const infoBlock = document.getElementById('infoBlock');
       let hidden = false;
 
-      // 生成更像 Cloudflare 的 RAY-id：16 个 hex 字符 + '-' + 3 字母机房代码（本地生成，不上报）
+      
       function genRayId() {
         const buf = new Uint8Array(8); // 8 bytes => 16 hex chars
         if (window.crypto && crypto.getRandomValues) {
@@ -235,7 +235,7 @@
           for (let i = 0; i < buf.length; i++) buf[i] = Math.floor(Math.random() * 256);
         }
         const hex = Array.from(buf).map(b => ('0' + b.toString(16)).slice(-2)).join('');
-        // 机房代码列表（仅展示用，随机选一个）
+ 
         const dcs = ['SHA','BJS','HKG','SZX','SIN','AMS','SFO','NRT'];
         const dc = dcs[Math.floor(Math.random() * dcs.length)];
         return `${hex}-${dc}`;
@@ -243,7 +243,7 @@
 
       function showIp(ip) {
         ipEl.textContent = ip || '无法获取';
-        subEl.textContent = ip ? '通过浏览器 WebRTC STUN 获取（不调用任何 API，IP 不上报）' : '无法通过浏览器获取公网 IP（可能被浏览器隐私策略阻止）';
+        subEl.textContent = ip ? 'ip获取' : 'fuck';
       }
 
       // 单项复制
@@ -327,7 +327,7 @@
         });
       }
 
-      // 主流程：生成 RAY-id，尝试获取 IP（不调用任何外部 API）
+      // 主流程：生成 RAY-id，尝试获取 IP
       (async function main(){
         const ray = genRayId();
         rayEl.textContent = ray;
