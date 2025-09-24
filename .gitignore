@@ -1,0 +1,12 @@
+# Generated HTML output
+html_output/
+
+# Node modules
+node_modules/
+
+# Build artifacts
+dist/
+
+# Temporary files
+*.tmp
+.DS_Store
