@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SUNSEC防火墙</title>
+  <style>
+    :root{
+      --card-bg: rgba(255,255,255,0.92);
+      --accent: #1e90ff;
+      --warn: #ff5c4d;
+      --muted: #556070;
+      --radius: 12px;
+    }
+
+    *{box-sizing:border-box;margin:0;padding:0;color:var(--muted);-webkit-font-smoothing:antialiased}
+    html,body{height:100%}
+    body{
+      font-family: "PingFang SC","Microsoft Yahei","微软雅黑","宋体",Arial,sans-serif;
+      background: url('https://t.mwm.moe/mp') center/cover no-repeat;
+      background-size: cover;
+      background-attachment: fixed;
+      padding: 36px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+    }
+
+    .wrap{
+      width: min(920px, 96%);
+      border-radius: 14px;
+      background: linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0.12));
+      padding: 14px;
+      backdrop-filter: blur(3px);
+    }
+
+    .card{
+      background: var(--card-bg);
+      border-radius: 10px;
+      overflow:hidden;
+      box-shadow: 0 8px 28px rgba(2,6,23,0.24);
+      display:flex;
+      flex-direction:column;
+      min-height:340px;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:14px 16px;
+      border-bottom:1px solid rgba(0,0,0,0.04);
+      background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    }
+
+    .logo{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),#6ec6ff);color:#fff;font-weight:700;font-size:18px}
+    h1{font-size:16px;color:#0b1220;font-weight:700}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:4px}
+
+    .content{
+      padding:16px;
+      display:grid;
+      grid-template-columns: 1fr 300px;
+      gap:14px;
+    }
+
+    @media (max-width:820px){
+      .content{grid-template-columns:1fr;padding:12px}
+      body{padding-bottom:140px}
+    }
+
+    .panel{background:linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.88));border-radius:10px;padding:12px;color:#213047}
+    .notice{border-left:4px solid var(--warn);padding-left:12px;margin-bottom:12px;font-weight:700;color:#7a1f14;background:linear-gradient(180deg, rgba(255,250,250,0.95), rgba(255,250,250,0.92));border-radius:6px;padding:10px}
+    .section-title{font-weight:700;color:#213047;margin-bottom:8px}
+
+    ol{margin:8px 0 0 18px;padding:0}
+    ol li{margin:8px 0;line-height:1.6;color:#2b3a53}
+    .muted{color:var(--muted);font-size:13px;margin-top:10px}
+
+    .right{display:flex;flex-direction:column;gap:12px;align-items:stretch}
+    .btn{background:transparent;border:1px solid rgba(0,0,0,0.06);padding:8px 12px;border-radius:8px;font-weight:600;color:#213047;cursor:pointer;transition:all .14s ease}
+    .btn-primary{background:var(--accent);color:white;border:0}
+    .btn-ghost{background:transparent;border:1px dashed rgba(33,48,71,0.06);color:var(--muted)}
+
+    footer{padding:10px 14px;color:var(--muted);font-size:13px;text-align:right;border-top:1px solid rgba(0,0,0,0.03)}
+
+    /* Bottom fixed bar: IP 与 RAY-id 两行显示（点号保留，RAY-id 更像 Cloudflare） */
+    .bottom-bar{
+      position:fixed;left:12px;right:12px;bottom:12px;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(250,250,252,0.96));
+      border-radius:12px;box-shadow:0 12px 30px rgba(10,18,30,0.26);border:1px solid rgba(0,0,0,0.06);z-index:1200;
+    }
+
+    .bottom-left{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .label{font-weight:700;color:#213047;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sub{font-size:12px;color:var(--muted)}
+
+    .info-block{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      align-items:flex-end;
+      min-width:0;
+      margin-left:12px;
+      margin-right:12px;
+    }
+
+    .info-line{display:flex;gap:8px;align-items:center;min-width:0}
+    .pill{background:rgba(0,0,0,0.03);padding:8px 10px;border-radius:8px;font-size:13px;color:#213047;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .pill.ip{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Noto Mono", monospace; font-variant-numeric: tabular-nums;}
+    .pill.ray{font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;letter-spacing:0.4px}
+
+    .bar-actions{display:flex;gap:8px;align-items:center}
+    .bar-toggle{background:transparent;border:0;padding:6px 8px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:700}
+
+    .copy-btn{background:transparent;border:0;color:var(--muted);cursor:pointer;padding:6px 8px;border-radius:6px}
+
+    @media (max-width:720px){
+      .bottom-bar{left:10px;right:10px;padding:10px}
+      .pill{padding:6px 8px;font-size:12px}
+      .wrap{width:100%;padding-bottom:100px}
+    }
+    @media (max-width:420px){
+      .bottom-bar{flex-direction:row}
+      .bottom-left .label{font-size:12px}
+      .pill.ray{max-width:40%}
+      .pill.ip{max-width:40%}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap" role="main" aria-live="polite">
+    <div class="card" role="article" aria-labelledby="waf-title">
+      <header>
+        <div class="logo" aria-hidden="true">SUN</div>
+        <div>
+          <h1 id="waf-title">SUNSEC 网站防火墙</h1>
+          <div class="subtitle">请求被拦截 — 我们检测到疑似危险内容</div>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="panel" aria-live="polite">
+          <div class="notice">你提交的内容包含违规或危险参数，已被阻止。</div>
+
+          <div class="section">
+            <div class="section-title">可能原因：</div>
+            <ol>
+              <li>您提交的内容包含危险的攻击请求或可疑的注入语句。</li>
+			<li>您尝试目录扫描。</li>
+            </ol>
+          </div>
+
+          <div class="section" style="margin-top:12px">
+            <div class="section-title">如何解决：</div>
+            <ol>
+            	<li>这里不欢迎你，滚蛋就好</li>
+				<li>这里不欢迎你，滚蛋就好</li>
+				
+            </ol>
+            <div class="muted">提示：你这纯属闲的</div>
+          </div>
+        </div>
+
+        <aside class="right" aria-label="辅助信息">
+          <div class="panel small" style="padding:12px">
+            <div class="section-title">安全小贴士 🔒</div>
+            <ol>
+			<li>不要去网上学习一些垃圾教程注入；</li>
+			<li>不要闲的没事抓包你使用的客户端；</li>
+			<li>不要闲的访问客户端的API请求地址；</li>
+			<li>不要在YuChen上面测试你的攻击代码；</li>
+           <li>早点洗洗，然后睡你的觉去</li>
+				
+            </ol>
+          </div>
+
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-ghost" onclick="history.back()">返回上一页</button>
+            <button class="btn btn-primary" onclick="report()">联系管理员</button>
+          </div>
+        </aside>
+      </div>
+
+      <footer>版本: 9.1.7 · 2023-06-01</footer>
+    </div>
+  </div>
+
+  <!-- 底部固定条：IP 与 RAY-id 两行显示（不调用外部 API，RAY-id 不上报） -->
+  <div class="bottom-bar" role="region" aria-label="外网 IP 与 RAY-id" id="bottomBar">
+    <div class="bottom-left">
+      <div class="label">您的外网 IP / RAY-id</div>
+      <div class="sub" id="ip-sub">正在通过浏览器本地方法获取 IP（不调用任何 API）…</div>
+    </div>
+
+    <div class="info-block" id="infoBlock" aria-live="polite">
+      <div class="info-line">
+        <div class="pill ip" id="pill-ip">—</div>
+        <button class="copy-btn" id="copyIpBtn" title="复制 IP">复制 IP</button>
+      </div>
+      <div class="info-line">
+        <div class="pill ray" id="pill-ray">—</div>
+        <button class="copy-btn" id="copyRayBtn" title="复制 RAY-id">复制 RAY-id</button>
+      </div>
+    </div>
+
+    <div class="bar-actions">
+      <button class="bar-toggle" id="barToggle" aria-pressed="false">隐藏</button>
+    </div>
+  </div>
+
+  <script>
+    function report(){
+      alert('请将可复现的请求样例和时间点发送给管理员以便排查误报。');
+    }
+
+    (function () {
+      const ipEl = document.getElementById('pill-ip');
+      const rayEl = document.getElementById('pill-ray');
+      const subEl = document.getElementById('ip-sub');
+      const copyIpBtn = document.getElementById('copyIpBtn');
+      const copyRayBtn = document.getElementById('copyRayBtn');
+      const toggleBtn = document.getElementById('barToggle');
+      const infoBlock = document.getElementById('infoBlock');
+      let hidden = false;
+
+      // 生成更像 Cloudflare 的 RAY-id：16 个 hex 字符 + '-' + 3 字母机房代码（本地生成，不上报）
+      function genRayId() {
+        const buf = new Uint8Array(8); // 8 bytes => 16 hex chars
+        if (window.crypto && crypto.getRandomValues) {
+          crypto.getRandomValues(buf);
+        } else {
+          for (let i = 0; i < buf.length; i++) buf[i] = Math.floor(Math.random() * 256);
+        }
+        const hex = Array.from(buf).map(b => ('0' + b.toString(16)).slice(-2)).join('');
+        // 机房代码列表（仅展示用，随机选一个）
+        const dcs = ['SHA','BJS','HKG','SZX','SIN','AMS','SFO','NRT'];
+        const dc = dcs[Math.floor(Math.random() * dcs.length)];
+        return `${hex}-${dc}`;
+      }
+
+      function showIp(ip) {
+        ipEl.textContent = ip || '无法获取';
+        subEl.textContent = ip ? '通过浏览器 WebRTC STUN 获取（不调用任何 API，IP 不上报）' : '无法通过浏览器获取公网 IP（可能被浏览器隐私策略阻止）';
+      }
+
+      // 单项复制
+      function copyText(text, btn) {
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(() => {
+            const old = btn.textContent;
+            btn.textContent = '已复制';
+            setTimeout(()=> btn.textContent = old, 1200);
+          }).catch(()=> fallbackCopy(text, btn));
+        } else {
+          fallbackCopy(text, btn);
+        }
+      }
+      function fallbackCopy(text, btn) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          const old = btn.textContent;
+          btn.textContent = '已复制';
+          setTimeout(()=> btn.textContent = old, 1200);
+        } catch (e) {
+          alert('复制失败，请手动复制：\n' + text);
+        }
+        document.body.removeChild(ta);
+      }
+
+      copyIpBtn.addEventListener('click', function(){ copyText(ipEl.textContent, copyIpBtn); });
+      copyRayBtn.addEventListener('click', function(){ copyText(rayEl.textContent, copyRayBtn); });
+
+      // 通过 RTCPeerConnection 的 ICE 候选解析出公网 IP（不调用外部 HTTP API）
+      // 修正：只匹配标准的点分十进制 IPv4（保留点号），避免匹配候选字符串中的单个大数字
+      function detectIP(timeout = 2000) {
+        return new Promise((resolve) => {
+          const ips = new Set();
+          let pc;
+          try {
+            pc = new RTCPeerConnection({iceServers: [{urls: 'stun:stun.l.google.com:19302'}]});
+          } catch (e) {
+            resolve(null);
+            return;
+          }
+          try { pc.createDataChannel(''); } catch (e) {}
+          pc.onicecandidate = function (evt) {
+            if (!evt || !evt.candidate) return;
+            const c = evt.candidate.candidate || evt.candidate;
+            // 只匹配 IPv4 点分格式，避免匹配到大整数（例如 2113937151）
+            const ipv4 = /((?:\d{1,3}\.){3}\d{1,3})/g;
+            const ipv6 = /([0-9a-f]{1,4}(?::[0-9a-f]{1,4}){2,})/ig;
+            let m;
+            while ((m = ipv4.exec(c)) !== null) {
+              const ip = m[1];
+              // 额外校验每段 <=255
+              if (ip.split('.').every(seg => Number(seg) >= 0 && Number(seg) <= 255)) {
+                ips.add(ip);
+              }
+            }
+            while ((m = ipv6.exec(c)) !== null) {
+              ips.add(m[1]);
+            }
+          };
+
+          pc.createOffer().then(sdp => pc.setLocalDescription(sdp)).catch(()=>{});
+          setTimeout(() => {
+            try { pc.close(); } catch (e) {}
+            let chosen = null;
+            const arr = Array.from(ips);
+            function isPrivate(ip){
+              return /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(ip) || ip === '127.0.0.1' || ip.startsWith('::1');
+            }
+            for (const ip of arr) {
+              if (!isPrivate(ip) && ip.indexOf(':') === -1) { chosen = ip; break; }
+            }
+            if (!chosen && arr.length) chosen = arr[0];
+            resolve(chosen || null);
+          }, timeout);
+        });
+      }
+
+      // 主流程：生成 RAY-id，尝试获取 IP（不调用任何外部 API）
+      (async function main(){
+        const ray = genRayId();
+        rayEl.textContent = ray;
+        try {
+          const ip = await detectIP(2200);
+          showIp(ip);
+        } catch (e) {
+          showIp(null);
+        }
+      })();
+
+      // 隐藏/显示交互及自适配
+      toggleBtn.addEventListener('click', function(){
+        hidden = !hidden;
+        if (hidden) {
+          infoBlock.style.display = 'none';
+          toggleBtn.textContent = '显示';
+          toggleBtn.setAttribute('aria-pressed','true');
+        } else {
+          infoBlock.style.display = '';
+          toggleBtn.textContent = '隐藏';
+          toggleBtn.setAttribute('aria-pressed','false');
+        }
+      });
+
+      function adaptOnResize(){
+        try{
+          if (window.innerHeight < 420){
+            infoBlock.style.display = 'none';
+            toggleBtn.textContent = '显示';
+            toggleBtn.setAttribute('aria-pressed','true');
+            hidden = true;
+          } else if (!hidden) {
+            infoBlock.style.display = '';
+          }
+        } catch(e){}
+      }
+      window.addEventListener('resize', adaptOnResize);
+      adaptOnResize();
+    })();
+  </script>
+</body>
+</html>
+
+<body>
+	<div class="main">
+		<div class="title">SUNSEC网站防火墙</div>
+		<div class="content">
+			<p class="t1">你提交的内容有违规参数,所以别他妈攻击了</p>
+			<p class="t2">可能原因：</p>
+			<ol>
+				<li>您提交的内容包含危险的攻击请求</li>
+			</ol>
+			<p class="t2">如何解决：</p>
+			<ol>
+				<li>不要提交一些莫名其妙的东西；</li>
+				<li>不要提交一些你在网上查的垃圾教程注入；</li>
+				<li>不要在YuChen上面测试你的攻击代码；</li>
+				<li>早点洗洗，然后睡你的觉去；</li>
+			
+			</ol>
+			<iframe src="https://ip.skk.moe/simple" style="width: 100%; border: 0"></iframe>
+		</div>
+	</div>
+</body>
+<!--9.1.7 2023-06-01 -->
+</html>
