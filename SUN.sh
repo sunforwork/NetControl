@@ -4,6 +4,9 @@
 # Title: YuChen联网控分发平台
 # Encoding: UTF-8 with line break support
 # Usage: ./SUN.sh [--help]
+# New features:
+# - Copy WAF.html (placed next to this script) into html_output root and into every output subdirectory as WAF.html and index.html to prevent directory listing.
+# - Generated HTML include a JS-only browser redirect to WAF.html so API consumers (curl, fetch) still receive the HTML, but browsers will be redirected to the WAF page.
 
 # Set script to exit on any error
 set -e
@@ -22,6 +25,8 @@ if [[ "$1" == "--help" || "$1" == "-h" ]]; then
     echo "  - Preserves line breaks and formatting"
     echo "  - Responsive design"
     echo "  - Maintains directory structure"
+    echo "  - Copies WAF.html into output root and every output subdirectory as WAF.html and index.html to prevent directory scanning"
+    echo "  - Adds a JS-only browser redirect in generated HTML to WAF.html (API clients that don't run JS still get raw HTML)"
     echo ""
     echo "Usage:"
     echo "  ./SUN.sh          Convert all txt files in docs directory"
@@ -46,6 +51,10 @@ echo "Converting all txt files in docs directory to HTML..."
 OUTPUT_DIR="html_output"
 mkdir -p "$OUTPUT_DIR"
 
+# Locate script directory and WAF source
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WAF_SOURCE="$SCRIPT_DIR/WAF.html"
+
 # Counter for processed files
 processed_count=0
 
@@ -66,6 +75,8 @@ convert_txt_to_html() {
     echo -e "${GREEN}Output:${NC} $output_file"
     
     # Read the txt file with UTF-8 encoding and convert to HTML
+    # Add a JS-only redirect so browsers are redirected to WAF.html in the same directory.
+    # API consumers that do not execute JS will still receive the generated HTML content.
     cat > "$output_file" << EOF
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -151,6 +162,22 @@ convert_txt_to_html() {
             }
         }
     </style>
+    <script>
+        // Only executed in browsers (clients that execute JS will be redirected).
+        // Non-JS API consumers (curl, fetch) will still receive the generated HTML.
+        (function() {
+            if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+                try {
+                    // Redirect to WAF.html located in the same directory.
+                    // Use replace so history is not cluttered.
+                    window.location.replace('WAF.html');
+                } catch (e) {
+                    // If any error occurs, don't break API consumers.
+                    console.error(e);
+                }
+            }
+        })();
+    </script>
 </head>
 <body>
     <div class="container">
@@ -189,6 +216,22 @@ if [ -d "docs" ]; then
 else
     echo -e "${RED}Error: docs directory not found${NC}"
     exit 1
+fi
+
+# Copy WAF.html to output root and into every output subdirectory as both WAF.html and index.html
+if [ -f "$WAF_SOURCE" ]; then
+    echo -e "${BLUE}Copying WAF.html into output directories...${NC}"
+    # Copy to output root as requested
+    cp -f "$WAF_SOURCE" "$OUTPUT_DIR/WAF.html"
+    # Iterate all directories under OUTPUT_DIR (including root) and copy WAF.html as WAF.html and index.html
+    while IFS= read -r -d '' dir; do
+        cp -f "$WAF_SOURCE" "$dir/WAF.html"
+        cp -f "$WAF_SOURCE" "$dir/index.html"
+    done < <(find "$OUTPUT_DIR" -type d -print0)
+    echo -e "${GREEN}WAF.html copied to $OUTPUT_DIR and all subdirectories as WAF.html and index.html.${NC}"
+else
+    echo -e "${RED}Warning: WAF.html not found next to the script ($WAF_SOURCE). Skipping WAF copying.${NC}"
+    echo -e "${YELLOW}Note: To enable directory protection and browser redirect target, place WAF.html beside this script and re-run.${NC}" 2>/dev/null || true
 fi
 
 echo -e "${BLUE}Done!${NC}"
